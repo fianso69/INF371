@@ -1,0 +1,35 @@
+module Binary_search
+
+  use int.Int
+  use int.ComputerDivision
+  use ref.Ref
+  use array.Array
+
+  exception Break int
+
+  let binary_search (a: array int) (v: int)
+    =
+        requires {forall i: int. forall j: int. 0 <= i <= j < length a -> a[i] <= a[j] }
+        ensures { result >= 0 <-> 0 <= result < length a /\ a[result] = v }
+        ensures { result = -1 <-> forall i: int. 0 <= i < length a -> a[i] <> v }
+        ensures { result >= -1 }
+    let l = ref 0 in
+    let u = ref (length a - 1) in
+    try
+      while !l <= !u do
+        invariant { forall i: int. 0 <= i < !l -> a[i] <> v }
+        invariant { forall i: int. !u < i < length a -> a[i] <> v }
+        invariant { 0 <= !l /\ !u < length a }
+        invariant { !l <= !u -> 0 <= div (!l + !u) 2 < length a }
+        variant {!u - !l }
+        let m = div (!l + !u) 2 in
+        if a[m] < v then l := m + 1
+        else if a[m] > v then u := m - 1
+        else raise (Break m)
+      done;
+      -1
+    with Break m ->
+      m
+    end
+
+end

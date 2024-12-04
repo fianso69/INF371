@@ -1,0 +1,68 @@
+module Swap_predicate
+
+  use int.Int
+  use array.Array
+  use export array.ArrayPermut
+  use array.ArrayExchange as E
+
+  predicate logical_swap (a1 a2: array int) (i j: int) =
+      length a1 = length a2 /\ 
+      ( forall k: int. 0 <= k < length a1 /\ k <> i /\ k <> j -> a1[k] = a2[k] ) /\
+      a1[i] = a2[j] /\ a1[j] = a2[i] /\ 0 <= i < length a1 /\ 0 <= j < length a1
+
+  (* lemmes techniques permettant l'automatisation des preuves :
+     comme les enseignants sont éminemment sympathiques, ils sont fournis. *)
+
+  lemma swap_exchange :
+    forall a1 a2: array int, i j: int.
+    logical_swap a1 a2 i j -> E.exchange a1 a2 i j
+
+  lemma swap_permut_all:
+    forall a1 a2: array int, i j: int.
+    logical_swap a1 a2 i j -> permut_all a1 a2
+
+end
+
+module Selection_sort
+
+  use int.Int
+  use ref.Ref
+  use array.Array
+  use Swap_predicate
+
+  let swap (a: array int) (i j: int)
+    =
+        requires { 0 <= i < length a /\ 0 <= j < length a }
+        ensures { logical_swap a (old a) i j }
+    label L in 
+    let tmp = a[i] in
+    a[i] <- a[j];
+    a[j] <- tmp
+
+  let sort (a: array int)
+    =
+        ensures { forall i: int. 0 <= i < length a - 1 -> a[i] <= a[i+1] }
+        ensures { permut_all a (old a) }
+    label L in
+    for i = 0 to length a - 1 do
+        invariant { forall j: int. 0 <= j < i-1 -> a[j] <= a[j+1] }
+        (* la liste est partiellement triée *)
+        invariant { forall j: int. forall k: int. 0 <= j < i <= k < length a -> a[j] <= a[k] }
+        (* les éléments non triés sont plus grands que ceux triés *)
+        invariant { permut_all a (old a) }
+      let mv = ref a[i] in
+      let mi = ref i in
+      for j = i + 1 to length a - 1 do
+        invariant { 0 <= i <= !mi < length a }
+        invariant { a[!mi] = !mv }
+        invariant { forall k: int. i <= k < j -> a[k] >= !mv }
+        if a[j] < !mv then begin
+          mi := j;
+          mv := a[j]
+        end
+      done;
+      swap a i !mi
+
+    done
+
+end
